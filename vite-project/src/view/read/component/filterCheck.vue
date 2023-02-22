@@ -1,7 +1,9 @@
 <template>
   <div class="flex flex-wrap border border-solid p-2">
     <div v-for="t, index in list" class="flex p-1 bg-gray-300 mx-1" @click="handleClick(index)">
-      <div class="w-16">{{ t }}</div>
+      <div class="w-16" v-if="t === 'remark'">备注</div>
+      <div class="w-16" v-else-if="t === 'useful'">标志状态</div>
+      <div class="w-16" v-else>{{ t }}</div>
       <div > {{ selectedIndexList[index] ? '✅' : '❌'}} </div>
     </div>
   </div>
@@ -14,7 +16,7 @@ const handleClick = (index:number) => {
   const t = selectedIndexList.value
   t[index] = !t[index]
   selectedIndexList.value = t
-  emits('update:value', list.filter((t,index) => selectedIndexList.value[index]))
+  emits('update:value', list.filter((_t,index) => selectedIndexList.value[index]))
 }
 
 onMounted(() => {
@@ -25,8 +27,14 @@ onMounted(() => {
     if(t.includes('AB')){
       selectedIndexList.value[index] = true
     }
+    if(t.includes('remark')){
+      selectedIndexList.value[index] = true
+    }
+    if(t.includes('useful')){
+      selectedIndexList.value[index] = true
+    }
   })
-  emits('update:value', list.filter((t,index) => selectedIndexList.value[index]))
+  emits('update:value', list.filter((_t,index) => selectedIndexList.value[index]))
 })
 
 const list = [
@@ -79,5 +87,7 @@ const list = [
   'UT',
   'DA',
   'ER',
+  'useful',
+  'remark'
 ].sort();
 </script>

@@ -11,4 +11,4 @@ fastify.get('/', (request, reply) => {
 fastify.listen({ port: 51227 }, (err, address) => {
   if (err) throw err
   // Server is now listening on ${address}
-})
+}) 
