@@ -5,9 +5,9 @@
       <Items :visibleKeyList="visibleKeyList" :content="curArticle" @change="handleChange" ref="itemRef"></Items>
     </div>
     <div class="flex justify-end mr-12 mb-2">
-      <Button class="mr-2">标记有效(q)</Button>
-      <Button class="mr-2">标记无效(w)</Button>
-      <Button class="mr-2">暂不标记(e)</Button>
+      <Button class="mr-2" @click="handleUseful">标记有效(q)</Button>
+      <Button class="mr-2" @click="handleUseless">标记无效(w)</Button>
+      <Button class="mr-2" @click="handleUnknown">暂不标记(e)</Button>
       <Button class="mr-2" @click="handleRemark">备注(r)</Button>
       <Button class="mr-2" @click="handleImport">导入数据</Button>
       <Button @click="handleExport" type="primary">导出数据</Button>
@@ -29,7 +29,7 @@ import FilterCheck from './component/filterCheck.vue';
 import { Button, Input, Modal } from 'ant-design-vue';
 import { ref, computed, h } from 'vue';
 import { articleList, articleIndex } from '@/globalData/index';
-import { onKeyStroke } from '@vueuse/core';
+import { onKeyStroke, useStorage } from '@vueuse/core';
 import { useRouter } from 'vue-router';
 import ExportModal from './component/exportModal.vue';
 
@@ -38,7 +38,10 @@ const visibleKeyList = ref<string[]>([]);
 const curArticle = computed(() => {
   return articleList.value[articleIndex.value - 1];
 });
+console.log('test');
+localStorage.setItem('test', '1232123')
 const itemRef = ref();
+const state = ref({});
 
 const formatIndex = (n: number, max: number) => {
   if (n <= 0) {
@@ -51,20 +54,15 @@ const formatIndex = (n: number, max: number) => {
 };
 
 onKeyStroke('q', (e) => {
-  curArticle.value['useful'] = ['true'];
-  articleIndex.value = articleIndex.value + 1;
-  articleIndex.value = formatIndex(articleIndex.value, articleList.value.length);
+  handleUseful();
   e.preventDefault();
 });
 onKeyStroke('w', (e) => {
-  curArticle.value['useful'] = ['false'];
-  articleIndex.value = articleIndex.value + 1;
-  articleIndex.value = formatIndex(articleIndex.value, articleList.value.length);
+  handleUseless();
   e.preventDefault();
 });
 onKeyStroke('e', (e) => {
-  articleIndex.value = articleIndex.value + 1;
-  articleIndex.value = formatIndex(articleIndex.value, articleList.value.length);
+  handleUnknown();
   e.preventDefault();
 });
 onKeyStroke('r', (e) => {
@@ -74,7 +72,6 @@ onKeyStroke('r', (e) => {
 
 onKeyStroke('ArrowLeft', (e) => {
   e.preventDefault();
-  console.log(articleList.value);
   articleIndex.value = articleIndex.value - 1;
   articleIndex.value = formatIndex(articleIndex.value, articleList.value.length);
 });
@@ -89,14 +86,78 @@ const handleImport = () => {
 };
 const handleExport = () => {
   Modal.confirm({
-    title:'导出',
-    content:h(ExportModal)
-  })
+    title: '导出',
+    content: h(ExportModal),
+    okText: '确认导出1',
+    onOk() {
+      const plainText = articleList.value
+        .filter((a) => a['useful'][0] === 'true')
+        .map((a) => {
+          const str = Object.keys(a)
+            .filter((k) => k.length === 2)
+            .map((k) => {
+              const v = a[k].join('\n   ');
+              return `${k} ${v}`;
+            })
+            .join('\n');
+          return str;
+        })
+        .join('\n');
+      const b = new Blob([plainText], { type: 'text/plain' });
+      const url = URL.createObjectURL(b);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'download1.txt';
+      a.click();
+      setTimeout(() => {
+        a.remove();
+      }, 5000);
+    },
+  });
 };
 const handleRemark = () => {
   itemRef.value.focus();
 };
 const handleChange = (v) => {
+  const ti = encodeURIComponent(curArticle.value?.TI?.join(' ') || '')
+  const lastV = state.value[ti]
+  state.value = {
+    ...state.value,
+    [ti]:{...lastV, remark: v.remark}
+  }
   articleList.value[articleIndex.value - 1] = v;
+};
+const handleUseful = () => {
+  const ti = encodeURIComponent(curArticle.value?.TI?.join(' ') || '')
+  console.log('ti', ti);
+  const lastV = state.value[ti]
+  state.value = {
+    ...state.value,
+    [ti]:{...lastV, useful: true}
+  }
+  curArticle.value['useful'] = ['true'];
+  articleIndex.value = articleIndex.value + 1;
+  articleIndex.value = formatIndex(articleIndex.value, articleList.value.length);
+};
+const handleUseless = () => {
+  const ti = encodeURIComponent(curArticle.value?.TI?.join(' ') || '')
+  const lastV = state.value[ti]
+  state.value = {
+    ...state.value,
+    [ti]:{...lastV, useful: false}
+  }
+  curArticle.value['useful'] = ['false'];
+  articleIndex.value = articleIndex.value + 1;
+  articleIndex.value = formatIndex(articleIndex.value, articleList.value.length);
+};
+const handleUnknown = () => {
+  const ti = encodeURIComponent(curArticle.value?.TI?.join(' ') || '')
+  const lastV = state.value[ti]
+  state.value = {
+    ...state.value,
+    [ti]:{...lastV, useful: ''}
+  }
+  articleIndex.value = articleIndex.value + 1;
+  articleIndex.value = formatIndex(articleIndex.value, articleList.value.length);
 };
 </script>
