@@ -27,9 +27,9 @@
 import Items from './component/items.vue';
 import FilterCheck from './component/filterCheck.vue';
 import { Button, Input, Modal } from 'ant-design-vue';
-import { ref, computed, h } from 'vue';
+import { ref, computed, h, watch } from 'vue';
 import { articleList, articleIndex } from '@/globalData/index';
-import { onKeyStroke, useStorage } from '@vueuse/core';
+import { onKeyStroke } from '@vueuse/core';
 import { useRouter } from 'vue-router';
 import ExportModal from './component/exportModal.vue';
 
@@ -38,10 +38,9 @@ const visibleKeyList = ref<string[]>([]);
 const curArticle = computed(() => {
   return articleList.value[articleIndex.value - 1];
 });
-console.log('test');
-localStorage.setItem('test', '1232123')
+
+
 const itemRef = ref();
-const state = ref({});
 
 const formatIndex = (n: number, max: number) => {
   if (n <= 0) {
@@ -52,6 +51,32 @@ const formatIndex = (n: number, max: number) => {
   }
   return n;
 };
+
+const gotoNextPage = () => {
+  articleIndex.value = articleIndex.value + 1;
+  articleIndex.value = formatIndex(articleIndex.value, articleList.value.length);
+};
+
+const gotoPrePage = () => {
+  articleIndex.value = articleIndex.value - 1;
+  articleIndex.value = formatIndex(articleIndex.value, articleList.value.length);
+};
+// 用持久化的数据初始化当前文章
+const initCurArticle = async () => {
+  const ti = encodeURIComponent(curArticle.value?.TI?.join(' ') || '');
+  const lastV = await window.electronAPI.getArticle(ti);
+  console.log(lastV, 'aslll');
+  const v = articleList.value[articleIndex.value - 1];
+  articleList.value[articleIndex.value - 1] = { ...v, ...lastV };
+};
+watch(
+  () => curArticle.value.TI,
+  () => {
+    console.log('ccccc');
+    initCurArticle();
+  },
+  { immediate: true }
+);
 
 onKeyStroke('q', (e) => {
   handleUseful();
@@ -72,12 +97,10 @@ onKeyStroke('r', (e) => {
 
 onKeyStroke('ArrowLeft', (e) => {
   e.preventDefault();
-  articleIndex.value = articleIndex.value - 1;
-  articleIndex.value = formatIndex(articleIndex.value, articleList.value.length);
+  gotoPrePage();
 });
 onKeyStroke('ArrowRight', (e) => {
-  articleIndex.value = articleIndex.value + 1;
-  articleIndex.value = formatIndex(articleIndex.value, articleList.value.length);
+  gotoNextPage();
   e.preventDefault();
 });
 
@@ -88,7 +111,7 @@ const handleExport = () => {
   Modal.confirm({
     title: '导出',
     content: h(ExportModal),
-    okText: '确认导出1',
+    okText: '确认导出',
     onOk() {
       const plainText = articleList.value
         .filter((a) => a['useful'][0] === 'true')
@@ -118,46 +141,34 @@ const handleExport = () => {
 const handleRemark = () => {
   itemRef.value.focus();
 };
-const handleChange = (v) => {
-  const ti = encodeURIComponent(curArticle.value?.TI?.join(' ') || '')
-  const lastV = state.value[ti]
-  state.value = {
-    ...state.value,
-    [ti]:{...lastV, remark: v.remark}
-  }
+const handleChange = async (v) => {
+  const ti = encodeURIComponent(curArticle.value?.TI?.join(' ') || '');
+  const lastV = await window.electronAPI.getArticle(ti);
+  await window.electronAPI.addArticle({ ...lastV, ti, remark: v.remark });
+
   articleList.value[articleIndex.value - 1] = v;
 };
-const handleUseful = () => {
-  const ti = encodeURIComponent(curArticle.value?.TI?.join(' ') || '')
-  console.log('ti', ti);
-  const lastV = state.value[ti]
-  state.value = {
-    ...state.value,
-    [ti]:{...lastV, useful: true}
-  }
+const handleUseful = async () => {
+  const ti = encodeURIComponent(curArticle.value?.TI?.join(' ') || '');
+  const lastV = await window.electronAPI.getArticle(ti);
+  await window.electronAPI.addArticle({ ...lastV, ti, useful: ['true'] });
+
   curArticle.value['useful'] = ['true'];
-  articleIndex.value = articleIndex.value + 1;
-  articleIndex.value = formatIndex(articleIndex.value, articleList.value.length);
+  gotoNextPage();
 };
-const handleUseless = () => {
-  const ti = encodeURIComponent(curArticle.value?.TI?.join(' ') || '')
-  const lastV = state.value[ti]
-  state.value = {
-    ...state.value,
-    [ti]:{...lastV, useful: false}
-  }
+const handleUseless = async () => {
+  const ti = encodeURIComponent(curArticle.value?.TI?.join(' ') || '');
+  const lastV = await window.electronAPI.getArticle(ti);
+  await window.electronAPI.addArticle({ ...lastV, ti, useful: ['false'] });
+
   curArticle.value['useful'] = ['false'];
-  articleIndex.value = articleIndex.value + 1;
-  articleIndex.value = formatIndex(articleIndex.value, articleList.value.length);
+  gotoNextPage();
 };
-const handleUnknown = () => {
-  const ti = encodeURIComponent(curArticle.value?.TI?.join(' ') || '')
-  const lastV = state.value[ti]
-  state.value = {
-    ...state.value,
-    [ti]:{...lastV, useful: ''}
-  }
-  articleIndex.value = articleIndex.value + 1;
-  articleIndex.value = formatIndex(articleIndex.value, articleList.value.length);
+const handleUnknown = async () => {
+  const ti = encodeURIComponent(curArticle.value?.TI?.join(' ') || '');
+  const lastV = await window.electronAPI.getArticle(ti);
+  await window.electronAPI.addArticle({ ...lastV, ti, useful: [] });
+
+  gotoNextPage();
 };
 </script>
