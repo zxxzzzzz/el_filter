@@ -1,8 +1,8 @@
 <template>
   <div>
     <div class="flex">
-      <div>一共筛选了</div>
-      <div>{{usefulCount + uselessCount}}篇</div>
+      <div>一共有</div>
+      <div>{{usefulCount + uselessCount + unknownCount}}篇</div>
     </div>
     <div class="flex">
       <div>标记有效的</div>

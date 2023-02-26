@@ -7,26 +7,29 @@ const store = new Store();
 
 const createWindow = () => {
   const win = new BrowserWindow({
-    width: 800,
-    height: 600,
+    width: 1440,
+    height: 900,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
     },
   });
 
   // win.webContents.openDevTools()
-  // win.loadFile('./dist/index.html')
-  win.loadURL('http://127.0.0.1:5173/');
+  win.loadFile('./dist/index.html')
+  // win.loadURL('http://127.0.0.1:5173/');
 };
 // {ti:'',remark:'',useful:''}
 const addArticle = (e, info) => {
-  console.log('set', info);
-  store.set(info?.ti, info);
-  return info;
+  if (info?.key?.[0]) {
+    store.set(info.key[0], info);
+    return info;
+  }
 };
 const getArticle = (e, k) => {
+  if (!k) {
+    return store.store;
+  }
   const t = store.get(k) || {};
-  // console.log('get', t);
   return t;
 };
 

@@ -35,7 +35,6 @@ const handleChange = (v) => {
 
 defineExpose({
   focus: () => {
-    console.log(remarkRef.value, 'remarkRef.value');
     if (remarkRef.value) {
       remarkRef.value[0].focus();
     }

@@ -2,7 +2,7 @@
   <div>
     <div class="flex justify-center">
       <TypographyTitle>文章过滤工具</TypographyTitle>
-      <div>v0.0.1</div>
+      <div>v1.0.0</div>
     </div>
     <div class="flex justify-start px-24">
       <div color="green">已导入文章</div>
@@ -49,7 +49,7 @@ const splitArticle = (c: string) => {
     }, [] as string[]);
 };
 
-const article2Obj = (str: string) => {
+const article2Obj = (str: string): { [key: string]: string[] } => {
   let tk = '';
   const ob = str.split('\n').reduce((re, cur) => {
     if (cur.startsWith('   ')) {
@@ -64,6 +64,18 @@ const article2Obj = (str: string) => {
       tk = k;
       return { ...re, [k]: [c] };
     }
+    if (cur.startsWith('x[')) {
+      const k = cur.slice(2, 6);
+      const c = cur.slice(8);
+      tk = k;
+      return { ...re, [k]: [c], useful: ['false'] };
+    }
+    if (cur.startsWith('x')) {
+      const k = cur.slice(1, 3);
+      const c = cur.slice(4);
+      tk = k;
+      return { ...re, [k]: [c], useful: ['false'] };
+    }
     const k = cur.slice(0, 2);
     const c = cur.slice(3);
     tk = k;
@@ -74,21 +86,43 @@ const article2Obj = (str: string) => {
     .reduce((re, cur) => {
       return { ...re, [cur]: ob[cur] };
     }, {} as { [key: string]: string[] });
-  return { ...filterObj, remark: [''] };
+  return { ...filterObj, useful: filterObj?.useful || [], remark: [''] };
 };
 
 const handleRequest = (fileInfo: any) => {
   const file = fileInfo.file;
-  console.log(fileInfo);
   const fileRead = new FileReader();
   fileRead.onloadend = () => {
     const result = fileRead.result as string;
     const articleList = splitArticle(result);
-    const objList = articleList.map((a) => {
+    const tiList: string[] = [];
+    const _objList = articleList.map((a) => {
       return article2Obj(a);
     });
+    const isHasUsefulFalse = _objList.some(o => o?.useful?.[0] === 'false')
+    const __objList = _objList.map(o => {
+      if(o?.useful?.[0] !== 'false' && isHasUsefulFalse){
+        return {...o, useful:['true']}
+      }
+      return o
+    })
+    const objList = __objList
+      .reduce((re, cur) => {
+        const ti = encodeURIComponent(cur?.TI?.join(' ') || '');
+        if (tiList.includes(ti)) {
+          return re;
+        }
+        tiList.push(ti);
+        return [...re, cur];
+      }, [] as { [key: string]: string[] }[])
+      .filter((a) => {
+        const ti = encodeURIComponent(a?.TI?.join(' ') || '');
+        return global.articleList.value.every((a2) => {
+          const ti2 = encodeURIComponent(a2?.TI?.join(' ') || '');
+          return ti !== ti2;
+        });
+      });
     global.articleList.value = [...global.articleList.value, ...objList];
-    console.log(global.articleList.value, 'global.articleList.value');
     fileList.value = [...fileList.value, { name: file.name }];
   };
   fileRead.readAsText(file);

@@ -27,7 +27,7 @@
 import Items from './component/items.vue';
 import FilterCheck from './component/filterCheck.vue';
 import { Button, Input, Modal } from 'ant-design-vue';
-import { ref, computed, h, watch } from 'vue';
+import { ref, computed, h, watch, onMounted } from 'vue';
 import { articleList, articleIndex } from '@/globalData/index';
 import { onKeyStroke } from '@vueuse/core';
 import { useRouter } from 'vue-router';
@@ -38,7 +38,6 @@ const visibleKeyList = ref<string[]>([]);
 const curArticle = computed(() => {
   return articleList.value[articleIndex.value - 1];
 });
-
 
 const itemRef = ref();
 
@@ -61,21 +60,37 @@ const gotoPrePage = () => {
   articleIndex.value = articleIndex.value - 1;
   articleIndex.value = formatIndex(articleIndex.value, articleList.value.length);
 };
-// 用持久化的数据初始化当前文章
-const initCurArticle = async () => {
-  const ti = encodeURIComponent(curArticle.value?.TI?.join(' ') || '');
+// 用持久化的数据初始化文章
+const initArticle = async (article: { [key: string]: string[] }) => {
+  const ti = encodeURIComponent(article?.TI?.join(' ') || '');
   const lastV = await window.electronAPI.getArticle(ti);
-  console.log(lastV, 'aslll');
-  const v = articleList.value[articleIndex.value - 1];
-  articleList.value[articleIndex.value - 1] = { ...v, ...lastV };
+  articleList.value = articleList.value.map((a, index) => {
+    const v = articleList.value[index];
+    if (article.TI[0] === a.TI[0]) {
+      return { ...v, ...lastV };
+    }
+    return v;
+  });
 };
+const setArticleStore = async (article: { [key: string]: string[] }, obj: { [key: string]: any }) => {
+  const ti = encodeURIComponent(article?.TI?.join(' ') || '');
+  const lastV = await window.electronAPI.getArticle(ti);
+  await window.electronAPI.addArticle({ ...lastV, key: [ti], ...obj });
+};
+onMounted(async () => {
+  const tList = [...articleList.value]
+  tList.forEach((a) => {
+    initArticle(a);
+    console.log('set');
+    setArticleStore(a, JSON.parse(JSON.stringify(a)))
+  });
+});
 watch(
   () => curArticle.value.TI,
   () => {
-    console.log('ccccc');
-    initCurArticle();
+    initArticle(curArticle.value);
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 onKeyStroke('q', (e) => {
@@ -112,25 +127,26 @@ const handleExport = () => {
     title: '导出',
     content: h(ExportModal),
     okText: '确认导出',
+    cancelText: '取消',
     onOk() {
       const plainText = articleList.value
-        .filter((a) => a['useful'][0] === 'true')
+        .filter((a) => a['useful']?.[0] === 'true')
         .map((a) => {
           const str = Object.keys(a)
             .filter((k) => k.length === 2)
             .map((k) => {
-              const v = a[k].join('\n   ');
+              const v = Array.isArray(a[k]) ? a[k].join('\n   ') : a[k];
               return `${k} ${v}`;
             })
             .join('\n');
           return str;
         })
-        .join('\n');
+        .join('\n\n');
       const b = new Blob([plainText], { type: 'text/plain' });
       const url = URL.createObjectURL(b);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'download1.txt';
+      a.download = 'download_filter.txt';
       a.click();
       setTimeout(() => {
         a.remove();
@@ -142,33 +158,21 @@ const handleRemark = () => {
   itemRef.value.focus();
 };
 const handleChange = async (v) => {
-  const ti = encodeURIComponent(curArticle.value?.TI?.join(' ') || '');
-  const lastV = await window.electronAPI.getArticle(ti);
-  await window.electronAPI.addArticle({ ...lastV, ti, remark: v.remark });
-
+  await setArticleStore(curArticle.value, { remark: v.remark });
   articleList.value[articleIndex.value - 1] = v;
 };
 const handleUseful = async () => {
-  const ti = encodeURIComponent(curArticle.value?.TI?.join(' ') || '');
-  const lastV = await window.electronAPI.getArticle(ti);
-  await window.electronAPI.addArticle({ ...lastV, ti, useful: ['true'] });
-
+  await setArticleStore(curArticle.value, { useful: ['true'] });
   curArticle.value['useful'] = ['true'];
   gotoNextPage();
 };
 const handleUseless = async () => {
-  const ti = encodeURIComponent(curArticle.value?.TI?.join(' ') || '');
-  const lastV = await window.electronAPI.getArticle(ti);
-  await window.electronAPI.addArticle({ ...lastV, ti, useful: ['false'] });
-
+  await setArticleStore(curArticle.value, { useful: ['false'] });
   curArticle.value['useful'] = ['false'];
   gotoNextPage();
 };
 const handleUnknown = async () => {
-  const ti = encodeURIComponent(curArticle.value?.TI?.join(' ') || '');
-  const lastV = await window.electronAPI.getArticle(ti);
-  await window.electronAPI.addArticle({ ...lastV, ti, useful: [] });
-
+  await setArticleStore(curArticle.value, { useful: [''] });
   gotoNextPage();
 };
 </script>
