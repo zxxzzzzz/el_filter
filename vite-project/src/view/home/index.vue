@@ -64,18 +64,6 @@ const article2Obj = (str: string): { [key: string]: string[] } => {
       tk = k;
       return { ...re, [k]: [c] };
     }
-    if (cur.startsWith('x[')) {
-      const k = cur.slice(2, 6);
-      const c = cur.slice(8);
-      tk = k;
-      return { ...re, [k]: [c], useful: ['false'] };
-    }
-    if (cur.startsWith('x')) {
-      const k = cur.slice(1, 3);
-      const c = cur.slice(4);
-      tk = k;
-      return { ...re, [k]: [c], useful: ['false'] };
-    }
     const k = cur.slice(0, 2);
     const c = cur.slice(3);
     tk = k;
@@ -86,7 +74,7 @@ const article2Obj = (str: string): { [key: string]: string[] } => {
     .reduce((re, cur) => {
       return { ...re, [cur]: ob[cur] };
     }, {} as { [key: string]: string[] });
-  return { ...filterObj, useful: filterObj?.useful || [], remark: [''] };
+  return { ...filterObj, useful: [], remark: [''] };
 };
 
 const handleRequest = (fileInfo: any) => {

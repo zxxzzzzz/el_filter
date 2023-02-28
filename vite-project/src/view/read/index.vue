@@ -16,7 +16,7 @@
       <div class="flex">
         <div class="text-center">页码</div>
         <div class="w-24">
-          <Input v-model:value="articleIndex" size="small"></Input>
+          <Input :value="articleIndex" @update:value="handlePageChange" size="small"></Input>
         </div>
         <div>/ {{ articleList.length }}</div>
       </div>
@@ -81,8 +81,6 @@ onMounted(async () => {
   const tList = [...articleList.value]
   tList.forEach((a) => {
     initArticle(a);
-    console.log('set');
-    setArticleStore(a, JSON.parse(JSON.stringify(a)))
   });
 });
 watch(
@@ -175,4 +173,12 @@ const handleUnknown = async () => {
   await setArticleStore(curArticle.value, { useful: [''] });
   gotoNextPage();
 };
+const handlePageChange = (v) => {
+  try {
+    const num = parseInt(v, 10)
+    articleIndex.value = num
+  } catch (error) {
+    
+  }
+}
 </script>
